@@ -4,7 +4,8 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
     MessageEvent,
-    TextSendMessage
+    TextSendMessage,
+    ImageSendMessage
 )
 from firebase import firebase
 import convert
@@ -13,7 +14,9 @@ from io import BytesIO
 import json
 import uuid
 import yaml
-app = Flask(__name__, template_folder='../templates')
+from convert import string2image
+import os
+app = Flask(__name__, template_folder='../templates', static_folder="../static")
 
 with open("config.yaml") as f:
     dict = yaml.load(f, Loader=yaml.FullLoader)
@@ -27,8 +30,28 @@ line_bot_api = LineBotApi(
 handler = WebhookHandler(webhook_secret)
 url = firebase_url  # Firebase
 fb = firebase.FirebaseApplication(url, None)
-ngrok_url = ngrok_url
-@app.route("/process", methods=["POST"])
+@app.route("/send_msg", methods=["POST"])
+def send_msg():
+    if request.method=="POST":
+        input_dict = json.loads(request.json)
+        UserId = input_dict["user_id"]
+        image_dict = fb.get("/user/" + UserId, "images")
+        tmp_path = "../static/" + UserId
+        os.makedirs(tmp_path, exist_ok=True)
+        for k, v in image_dict.items():
+            image = string2image(v)
+            image.save(f"{tmp_path}/{k}.jpg") 
+            try:
+                message = ImageSendMessage(
+                    original_content_url= f"{ngrok_url}/static/{UserId}/{k}.jpg",
+                    preview_image_url= f"{ngrok_url}/static/{UserId}/{k}.jpg"
+                )
+                line_bot_api.push_message(UserId, message)
+
+            except:
+                line_bot_api.reply_message(UserId, TextSendMessage(text="發生錯誤！")) 
+    return "Ok"
+@app.route("/process", methods=["GET", "POST"])
 def process():
     if request.method=="POST":
         input_dict = json.loads(request.json)
@@ -38,12 +61,12 @@ def process():
             style = input_dict["style"]
             job_id = uuid.uuid4()
             fb.put("/user/" + UserId, "style", style)
-            fb.put("/job/" + job_id, "status", "idle")
-            fb.put("/job/" + job_id, "user_id", UserId)
+            fb.put("/job/" + str(job_id), "status", "idle")
+            fb.put("/job/" + str(job_id), "user_id", UserId)
         elif input_dict["method"] == "delete":
             for image in input_dict["image_list"]:
                 fb.delete("/user/" + UserId + "/images", image)
-        return "OK"
+    return "OK"
 @app.route("/<user_id>/show_image")
 def show_image(user_id):
     image_dict = fb.get(f"/user/{user_id}/images", '')
