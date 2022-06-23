@@ -11,15 +11,23 @@ import convert
 from PIL import Image
 from io import BytesIO
 import json
+import uuid
+import yaml
 app = Flask(__name__, template_folder='../templates')
 
+with open("config.yaml") as f:
+    dict = yaml.load(f, Loader=yaml.FullLoader)
+    firebase_url = dict[0]["firebase_config"]["firebase_url"]
+    ngrok_url = dict[1]["ngrok_config"]["ngrok_url"]
+    line_bot_api_secret = dict[2]["line_bot_config"]["line_bot_api_secret"]
+    webhook_secret = dict[2]["line_bot_config"]["webhook_secret"]
 line_bot_api = LineBotApi(
-    "2EFeRFjdjj0D7agjnXO8QoKRDtAL5kPovRqRoXbpKqZ0G8QB3CfX7hhbS9aNn4oksBJ3uRXGviT6ypj+DkZP04g+33VYN8gyhLx7K2tyeeczwesMD3Mt/CvZlGVzcngEEtsKqZsfHeawqPX+mOIcbwdB04t89/1O/w1cDnyilFU="
+    line_bot_api_secret
 )
-handler = WebhookHandler("fd83a08bbb14afc391da01d82011b05a")
-url = "https://cloud-system-b85e4-default-rtdb.firebaseio.com/"  # Firebase
+handler = WebhookHandler(webhook_secret)
+url = firebase_url  # Firebase
 fb = firebase.FirebaseApplication(url, None)
-ngrok_url = "https://f12a-61-216-173-3.jp.ngrok.io/"
+ngrok_url = ngrok_url
 @app.route("/process", methods=["POST"])
 def process():
     if request.method=="POST":
@@ -28,8 +36,10 @@ def process():
         UserId = input_dict["user_id"]
         if input_dict["method"] == "transform":
             style = input_dict["style"]
+            job_id = uuid.uuid4()
             fb.put("/user/" + UserId, "style", style)
-            fb.put("/job/" + UserId, "status", "idle")
+            fb.put("/job/" + job_id, "status", "idle")
+            fb.put("/job/" + job_id, "user_id", UserId)
         elif input_dict["method"] == "delete":
             for image in input_dict["image_list"]:
                 fb.delete("/user/" + UserId + "/images", image)

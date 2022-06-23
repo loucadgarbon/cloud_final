@@ -39,17 +39,21 @@ def sketch(image):
     sketch_img=cv2.divide(grey_img,invblur_img, scale=256.0)
     return sketch_img
 def compute_func():
-    fb.get("/user")
-            image_string = input_dict['Image']
-            image = string2image(image_string)
-            # pil to cv2
-            image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-            # compute algorithm
-            image = cartoon(image)
-            # cv2 to pil
-            image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-            image_string = image2string(image)
-            output_dict = {'Image': image_string}
+    jobs = fb.get("/job")
+    for job in jobs:
+        if job["status"] == "idle":
+            UserId = job["user_id"]
+            images = fb.get("/user/" + UserId, "images")
+            for k, v in images.items():
+                image = string2image(v)
+                # pil to cv2
+                image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+                # compute algorithm
+                image = cartoon(image)
+                # cv2 to pil
+                image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+                image_string = image2string(image)
+                fb.put("/user/" + UserId, "images", image_string)
 
 if __name__ == '__main__':
     while True:
