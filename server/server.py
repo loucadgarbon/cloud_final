@@ -35,7 +35,8 @@ def send_msg():
     if request.method=="POST":
         input_dict = json.loads(request.json)
         UserId = input_dict["user_id"]
-        image_dict = fb.get("/user/" + UserId, "images")
+        JobId = input_dict["job_id"]
+        image_dict = fb.get("/job/" + JobId, "images")
         tmp_path = "../static/" + UserId
         os.makedirs(tmp_path, exist_ok=True)
         for k, v in image_dict.items():

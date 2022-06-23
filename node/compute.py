@@ -50,20 +50,24 @@ def compute_func():
         if job["status"] == "idle":
             UserId = job["user_id"]
             images = fb.get("/user/" + UserId, "images")
+            style = fb.get("/user/" +UserId, "style")
             for k, v in images.items():
                 image = string2image(v)
                 # pil to cv2
                 image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
                 # compute algorithm
-                image = cartoon(image)
+                if style == "cartoon":
+                    image = cartoon(image)
+                elif style == "sketch":
+                    image = sketch(image)
                 # cv2 to pil
                 image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
                 image_string = image2string(image)
                 fb.put("/job/" + job_k + "/images", k, image_string)
                 fb.put("/job/" + job_k, "status", "finish")
-            request_json = json.dumps({"user_id": UserId})
+            request_json = json.dumps({"user_id": UserId, "job_id": job_k})
             requests.post(ngrok_url + "send_msg", json=request_json)
 if __name__ == '__main__':
     while True:
         compute_func()
-        time.sleep(60)
+        time.sleep(5)
