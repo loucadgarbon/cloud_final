@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">影像瀏覽</a>
+    </div>
+</nav>
+<section class="container-fluid mb-3">
+    
+    <div class="row" style="height:550px;overflow-y:scroll">
+    {% for k,v in image_dict.items() %}
+    <div class="col-md-3">
+        <div class="card" style="margin-bottom:10px">
+            <img src="data:image/jpeg;base64,{{v}}" class="card-img-top"/>
+            <div class="card-body">
+                <h5 class="card-title text-center">圖片ID : {{k}}</h5>
+                <div class="text-center"><input type="checkbox" class="form-check-input" value="{{k}}"></div>
+            </div>
+        </div>
+    </div>
+    {%endfor%}
+    </div>
+</section>
+<section class="container-fluid">
+    <div class="row">
+        <div class="col-md-3 mx-auto">
+            <select id="style_type" class="form-select mb-3" aria-label="選擇轉換風格">
+                <option selected value="not selected">選擇轉換風格</option>
+                <option value="cartoon">卡通風格</option>
+                <option value="sketch">素描風格</option>
+            </select>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col text-center">
+            <button type="button" class="btn btn-danger" onclick="click_delete()">刪除圖片</button>
+            <button type="button" class="btn btn-success" onclick="click_transform()">轉換圖片</button>
+        </div>
+    </div>
+</section>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<script>
+    function click_delete(){
+        var image_ckb = document.getElementsByClassName('form-check-input');
+        var image_array = []
+        
+        const checked_dict = {"user_id":"{{user_id}}", "method":"delete"}
+        for (i=0; i< image_ckb.length; i=i+1){
+            if(image_ckb[i].checked){
+                image_array.push(image_ckb[i].value)
+            }
+        }
+        if (image_array.length === 0) {
+            alert("沒有選擇圖片，刪除失敗");
+        }
+        else {
+            const image_dict = {"image_list":image_array}
+            const update_dict = {
+                ...checked_dict, 
+                ...image_dict
+            }
+            const s = JSON.stringify(update_dict)
+            $.ajax({
+                url:"/process",
+                type:"POST",
+                contentType: "application/json",
+                data: JSON.stringify(s)
+            });
+            alert("刪除成功");
+        }
+    }
+    function click_transform(){
+        var image_ckb = document.getElementsByClassName('form-check-input');
+        var image_array = []
+        var select = document.getElementById('style_type'); 
+        var style_type = select.options[select.selectedIndex].value
+        if (style_type == "not selected") {
+            alert("請先選擇轉換風格");
+        } 
+        else {
+            const op_dict = {"user_id":"{{user_id}}", "method":"transform", "style":style_type}
+            /*
+            for (i=0; i< image_ckb.length; i=i+1){
+                image_array.push(image_ckb[i].value)
+            }
+            const image_dict = {"image_list":image_array}
+            const update_dict = {
+                ...op_dict, 
+                ...image_dict
+            }
+            */
+            const s = JSON.stringify(op_dict)
+            $.ajax({
+                url:"/process",
+                type:"POST",
+                contentType: "application/json",
+                data: JSON.stringify(s)
+            });
+            alert("圖片開始進行轉換，請稍後...");
+        }
+    }
+</script>
+</html>
